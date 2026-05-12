@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Galerie</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e0d0;
+    --text-muted: #7a7268;
+    --accent: #c8a882;
+    --accent2: #8fa8c8;
+    --radius: 12px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .count-badge {
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    transition: color 0.3s;
+  }
+
+  .count-badge.active { color: var(--accent); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .btn:active { transform: scale(0.96); }
+  .btn:hover { background: var(--surface2); border-color: rgba(255,255,255,0.15); }
+
+  .btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1a1208;
+    font-weight: 500;
+  }
+
+  .btn-accent:hover { background: #d4b894; border-color: #d4b894; }
+
+  .btn svg { flex-shrink: 0; }
+
+  /* ── IMPORT ZONE ── */
+  #import-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    gap: 32px;
+    transition: opacity 0.5s;
+  }
+
+  .drop-area {
+    width: 100%;
+    max-width: 360px;
+    border: 1.5px dashed var(--border);
+    border-radius: 24px;
+    padding: 48px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    text-align: center;
+    background: var(--surface);
+    transition: border-color 0.3s, background 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-area.dragover {
+    border-color: var(--accent);
+    background: rgba(200,168,130,0.07);
+  }
+
+  .drop-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 20px;
+    background: rgba(200,168,130,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drop-icon svg { color: var(--accent); }
+
+  .drop-title {
+    font-size: 20px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+  }
+
+  .import-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* ── TOOLBAR ── */
+  #toolbar {
+    display: none;
+    padding: 10px 16px;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  #toolbar.visible { display: flex; }
+
+  .view-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+    margin-left: auto;
+  }
+
+  .view-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .view-btn.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .sort-select {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 6px 12px;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  /* ── GALLERY ── */
+  #gallery-wrap {
+    flex: 1;
+    display: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #gallery-wrap.visible { display: block; }
+
+  #gallery {
+    display: grid;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  #gallery.grid-3 { grid-template-columns: repeat(3, 1fr); }
+  #gallery.grid-2 { grid-template-columns: repeat(2, 1fr); }
+  #gallery.grid-1 { grid-template-columns: 1fr; }
+
+  .photo-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--surface);
+    -webkit-tap-highlight-color: transparent;
+    animation: fadeIn 0.3s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .photo-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  #gallery.grid-1 .photo-item img {
+    aspect-ratio: unset;
+    max-height: 70vh;
+    width: 100%;
+    object-fit: contain;
+    background: #000;
+  }
+
+  .photo-item:hover img { transform: scale(1.04); }
+
+  .photo-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 10px;
+  }
+
+  .photo-item:hover .photo-overlay,
+  #gallery.grid-1 .photo-item .photo-overlay { opacity: 1; }
+
+  .photo-name {
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.03em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .photo-size {
+    font-size: 10px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 2px;
+  }
+
+  /* ── LIGHTBOX ── */
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.97);
+    flex-direction: column;
+    animation: fadeIn 0.25s ease;
+  }
+
+  #lightbox.open { display: flex; }
+
+  .lb-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    padding-top: calc(14px + var(--safe-top));
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 2;
+    transition: opacity 0.4s;
+  }
+
+  .lb-header.hidden { opacity: 0; pointer-events: none; }
+
+  .lb-title { font-size: 14px; color: rgba(255,255,255,0.7); letter-spacing: 0.04em; }
+  .lb-counter { font-size: 12px; color: rgba(255,255,255,0.4); }
+
+  .lb-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s;
+  }
+
+  .lb-close:hover { background: rgba(255,255,255,0.2); }
+
+  .lb-img-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: pan-y pinch-zoom;
+  }
+
+  #lb-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    display: flex;
+    gap: 0;
+  }
+
+  .lb-prev { left: 12px; }
+  .lb-next { right: 12px; }
+
+  .lb-nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .lb-nav-btn:active { transform: scale(0.9); }
+  .lb-nav-btn:hover { background: rgba(255,255,255,0.2); }
+
+  .lb-footer {
+    padding: 12px 20px;
+    padding-bottom: calc(12px + var(--safe-bottom));
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.4s;
+  }
+
+  .lb-footer.hidden { opacity: 0; pointer-events: none; }
+
+  .lb-thumb-strip {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    flex: 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-behavior: smooth;
+  }
+
+  .lb-thumb-strip::-webkit-scrollbar { display: none; }
+
+  .lb-thumb {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    cursor: pointer;
+    opacity: 0.5;
+    border: 2px solid transparent;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+
+  .lb-thumb.active {
+    opacity: 1;
+    border-color: var(--accent);
+  }
+
+  /* ── EMPTY / PROGRESS ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--surface2);
+    z-index: 9999;
+    display: none;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+    transition: width 0.2s;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .stats-bar {
+    padding: 8px 20px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    display: none;
+    justify-content: space-between;
+  }
+
+  .stats-bar.visible { display: flex; }
+
+  /* ── PULL TO REFRESH HINT ── */
+  .hint {
+    text-align: center;
+    padding: 32px 20px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+
+  /* ── TRANSITION ── */
+  .slide-out { animation: slideOut 0.3s ease forwards; }
+  @keyframes slideOut {
+    to { opacity: 0; transform: translateY(-20px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"><div id="progress-fill"></div></div>
+
+<header>
+  <div class="logo">Ga<span>·</span>le<span>·</span>rie</div>
+  <div class="header-actions">
+    <span class="count-badge" id="count-badge">— photos</span>
+    <button class="btn btn-accent" id="add-btn" style="display:none" onclick="document.getElementById('file-more').click()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter
+    </button>
+  </div>
+</header>
+
+<div id="toolbar">
+  <select class="sort-select" id="sort-select" onchange="applySort()">
+    <option value="name-asc">Nom A→Z</option>
+    <option value="name-desc">Nom Z→A</option>
+    <option value="size-desc">Plus grand</option>
+    <option value="size-asc">Plus petit</option>
+  </select>
+  <button class="btn" id="clear-btn" onclick="clearAll()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+    Vider
+  </button>
+  <div class="view-toggle" style="margin-left:auto">
+    <button class="view-btn active" data-grid="3" onclick="setGrid(3,this)">
+      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="2" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/><rect x="16" y="9" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/></svg>
+    </button>
+    <button class="view-btn" data-grid="2" onclick="setGrid(2,this)">
+      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="9" height="9" rx="1"/><rect x="13" y="13" width="9" height="9" rx="1"/></svg>
+    </button>
+    <button class="view-btn" data-grid="1" onclick="setGrid(1,this)">
+      <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="8" rx="1"/><rect x="2" y="14" width="20" height="8" rx="1"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <span id="stats-count">0 photo</span>
+  <span id="stats-size">0 Mo</span>
+</div>
+
+<div id="import-zone">
+  <div class="drop-area" id="drop-area">
+    <div class="drop-icon">
+      <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </div>
+    <div>
+      <p class="drop-title">Vos photos</p>
+      <p class="drop-sub">Sélectionnez des photos ou un dossier complet depuis votre Galaxy</p>
+    </div>
+    <div class="import-btns">
+      <button class="btn btn-accent" onclick="document.getElementById('file-input').click()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Sélectionner des photos
+      </button>
+      <button class="btn" onclick="document.getElementById('folder-input').click()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        Ouvrir un dossier
+      </button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept="image/*" multiple onchange="loadFiles(this.files)">
+<input type="file" id="folder-input" accept="image/*" multiple webkitdirectory onchange="loadFiles(this.files)">
+<input type="file" id="file-more" accept="image/*" multiple onchange="addFiles(this.files)">
+
+<div id="gallery-wrap">
+  <div id="gallery" class="grid-3"></div>
+  <div class="hint">Appuyez sur une photo pour l'agrandir · Glissez pour naviguer</div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Visionneuse">
+  <div class="lb-header" id="lb-header">
+    <div>
+      <div class="lb-title" id="lb-title">photo.jpg</div>
+      <div class="lb-counter" id="lb-counter">1 / 1</div>
+    </div>
+    <button class="lb-close" onclick="closeLightbox()" aria-label="Fermer">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="lb-img-wrap" id="lb-img-wrap">
+    <img id="lb-img" src="" alt="">
+  </div>
+
+  <button class="lb-nav lb-prev lb-nav-btn" onclick="navigateLb(-1)" aria-label="Précédent">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="lb-nav lb-next lb-nav-btn" onclick="navigateLb(1)" aria-label="Suivant">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+
+  <div class="lb-footer" id="lb-footer">
+    <div class="lb-thumb-strip" id="lb-thumb-strip"></div>
+  </div>
+</div>
+
+<script>
+let photos = [];
+let currentLbIndex = 0;
+let currentGrid = 3;
+let touchStartX = 0;
+let touchStartY = 0;
+let uiHideTimer;
+
+// ── FILE LOADING ──
+function loadFiles(files) {
+  photos = [];
+  document.getElementById('gallery').innerHTML = '';
+  addFiles(files);
+}
+
+async function addFiles(files) {
+  const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) return;
+
+  showProgress();
+  for (let i = 0; i < imgs.length; i++) {
+    await processFile(imgs[i]);
+    setProgress((i + 1) / imgs.length * 100);
+  }
+  hideProgress();
+  applySort();
+  showGallery();
+}
+
+function processFile(file) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    photos.push({ name: file.name, size: file.size, url, file });
+    resolve();
+  });
+}
+
+function showGallery() {
+  document.getElementById('import-zone').style.display = 'none';
+  document.getElementById('gallery-wrap').classList.add('visible');
+  document.getElementById('toolbar').classList.add('visible');
+  document.getElementById('stats-bar').classList.add('visible');
+  document.getElementById('add-btn').style.display = 'inline-flex';
+  updateStats();
+  buildLightboxThumbs();
+}
+
+function updateStats() {
+  const total = photos.length;
+  const totalSize = photos.reduce((a, p) => a + p.size, 0);
+  document.getElementById('count-badge').textContent = total + ' photo' + (total > 1 ? 's' : '');
+  document.getElementById('count-badge').classList.toggle('active', total > 0);
+  document.getElementById('stats-count').textContent = total + ' photo' + (total > 1 ? 's' : '');
+  document.getElementById('stats-size').textContent = formatSize(totalSize);
+}
+
+function formatSize(bytes) {
+  if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + ' Go';
+  if (bytes > 1e6) return (bytes / 1e6).toFixed(1) + ' Mo';
+  return (bytes / 1e3).toFixed(0) + ' Ko';
+}
+
+// ── SORT ──
+function applySort() {
+  const val = document.getElementById('sort-select').value;
+  photos.sort((a, b) => {
+    if (val === 'name-asc') return a.name.localeCompare(b.name);
+    if (val === 'name-desc') return b.name.localeCompare(a.name);
+    if (val === 'size-desc') return b.size - a.size;
+    if (val === 'size-asc') return a.size - b.size;
+    return 0;
+  });
+  renderGallery();
+}
+
+function renderGallery() {
+  const g = document.getElementById('gallery');
+  g.innerHTML = '';
+  photos.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'photo-item';
+    item.style.animationDelay = Math.min(i * 0.03, 0.6) + 's';
+    item.innerHTML = `
+      <img src="${p.url}" alt="${p.name}" loading="lazy">
+      <div class="photo-overlay">
+        <div class="photo-name">${p.name}</div>
+        <div class="photo-size">${formatSize(p.size)}</div>
+      </div>`;
+    item.addEventListener('click', () => openLightbox(i));
+    g.appendChild(item);
+  });
+  buildLightboxThumbs();
+}
+
+// ── GRID ──
+function setGrid(n, btn) {
+  currentGrid = n;
+  document.getElementById('gallery').className = 'grid-' + n;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── CLEAR ──
+function clearAll() {
+  if (!confirm('Vider la galerie ?')) return;
+  photos.forEach(p => URL.revokeObjectURL(p.url));
+  photos = [];
+  document.getElementById('gallery').innerHTML = '';
+  document.getElementById('import-zone').style.display = '';
+  document.getElementById('gallery-wrap').classList.remove('visible');
+  document.getElementById('toolbar').classList.remove('visible');
+  document.getElementById('stats-bar').classList.remove('visible');
+  document.getElementById('add-btn').style.display = 'none';
+  document.getElementById('count-badge').textContent = '— photos';
+  document.getElementById('count-badge').classList.remove('active');
+  document.getElementById('file-input').value = '';
+  document.getElementById('folder-input').value = '';
+}
+
+// ── LIGHTBOX ──
+function buildLightboxThumbs() {
+  const strip = document.getElementById('lb-thumb-strip');
+  strip.innerHTML = '';
+  photos.forEach((p, i) => {
+    const t = document.createElement('img');
+    t.src = p.url;
+    t.className = 'lb-thumb';
+    t.alt = p.name;
+    t.loading = 'lazy';
+    t.addEventListener('click', () => goToLb(i));
+    strip.appendChild(t);
+  });
+}
+
+function openLightbox(index) {
+  currentLbIndex = index;
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  goToLb(index, false);
+  resetUiHide();
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+  clearTimeout(uiHideTimer);
+}
+
+function goToLb(index, animate = true) {
+  currentLbIndex = index;
+  const p = photos[index];
+  const img = document.getElementById('lb-img');
+  if (animate) {
+    img.style.opacity = '0';
+    img.style.transform = 'scale(0.97)';
+    setTimeout(() => {
+      img.src = p.url;
+      img.style.opacity = '1';
+      img.style.transform = 'scale(1)';
+    }, 150);
+  } else {
+    img.src = p.url;
+    img.style.opacity = '1';
+    img.style.transform = 'scale(1)';
+  }
+  document.getElementById('lb-title').textContent = p.name;
+  document.getElementById('lb-counter').textContent = (index + 1) + ' / ' + photos.length;
+
+  const thumbs = document.querySelectorAll('.lb-thumb');
+  thumbs.forEach((t, i) => t.classList.toggle('active', i === index));
+  thumbs[index]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+function navigateLb(dir) {
+  const next = (currentLbIndex + dir + photos.length) % photos.length;
+  goToLb(next);
+  resetUiHide();
+}
+
+// ── LIGHTBOX UI HIDE ──
+function resetUiHide() {
+  const header = document.getElementById('lb-header');
+  const footer = document.getElementById('lb-footer');
+  header.classList.remove('hidden');
+  footer.classList.remove('hidden');
+  clearTimeout(uiHideTimer);
+  uiHideTimer = setTimeout(() => {
+    header.classList.add('hidden');
+    footer.classList.add('hidden');
+  }, 3000);
+}
+
+// ── TOUCH SWIPE ──
+const lbWrap = document.getElementById('lb-img-wrap');
+lbWrap.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+lbWrap.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+    navigateLb(dx < 0 ? 1 : -1);
+  } else if (Math.abs(dy) < 20 && Math.abs(dx) < 20) {
+    resetUiHide();
+  }
+}, { passive: true });
+
+// ── KEYBOARD ──
+document.addEventListener('keydown', e => {
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  if (e.key === 'ArrowRight') navigateLb(1);
+  if (e.key === 'ArrowLeft') navigateLb(-1);
+  if (e.key === 'Escape') closeLightbox();
+});
+
+// ── DRAG & DROP ──
+const dropArea = document.getElementById('drop-area');
+['dragenter','dragover'].forEach(evt =>
+  dropArea.addEventListener(evt, e => { e.preventDefault(); dropArea.classList.add('dragover'); })
+);
+['dragleave','drop'].forEach(evt =>
+  dropArea.addEventListener(evt, e => { e.preventDefault(); dropArea.classList.remove('dragover'); })
+);
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  const files = e.dataTransfer?.files;
+  if (files?.length) loadFiles(files);
+});
+
+// ── PROGRESS ──
+function showProgress() {
+  const pb = document.getElementById('progress-bar');
+  pb.style.display = 'block';
+  setProgress(0);
+}
+function setProgress(pct) {
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+function hideProgress() {
+  setTimeout(() => {
+    document.getElementById('progress-bar').style.display = 'none';
+  }, 400);
+}
+
+// ── SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ── PWA INSTALL ──
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+</script>
+</body>
+</html>
